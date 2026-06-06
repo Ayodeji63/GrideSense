@@ -1,0 +1,18 @@
+{
+  "name": "GridSense EV",
+  "short_name": "GridSense",
+  "description": "Live EV charger discovery for Nigerian drivers with telemetry-backed suitability scoring.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fbf8",
+  "theme_color": "#079455",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "48x48 72x72 96x96 128x128 192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
