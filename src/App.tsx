@@ -98,6 +98,11 @@ function App() {
     setTheme((currentTheme) => (currentTheme === 'dark' ? 'light' : 'dark'))
   }
 
+  const updateBattery = (value: number) => {
+    setBattery(value)
+    setTargetCharge((currentTarget) => Math.max(currentTarget, value))
+  }
+
   return (
     <main className={`app-shell ${theme}-theme`}>
       <section className="phone-frame" aria-label="GridSense EV driver app">
@@ -108,7 +113,7 @@ function App() {
               battery={battery}
               bestStation={bestStation}
               efficiency={efficiency}
-              onBatteryChange={setBattery}
+              onBatteryChange={updateBattery}
               onEfficiencyChange={setEfficiency}
               onOpenMap={() => changeScreen('map')}
               onToggleTheme={toggleTheme}
@@ -125,7 +130,7 @@ function App() {
               selectedId={selectedStation.id}
               selectedStation={selectedStation}
               battery={battery}
-              onBatteryChange={setBattery}
+              onBatteryChange={updateBattery}
               onTargetChargeChange={setTargetCharge}
               onToggleTheme={toggleTheme}
               onUrgencyChange={setUrgency}

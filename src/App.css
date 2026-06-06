@@ -23,20 +23,6 @@
   flex-direction: column;
 }
 
-.phone-frame::before {
-  content: '';
-  position: absolute;
-  width: 142px;
-  height: 28px;
-  margin: 0 auto;
-  left: 0;
-  right: 0;
-  top: 28px;
-  border-radius: 0 0 18px 18px;
-  background: #101211;
-  z-index: 20;
-}
-
 .screen-content {
   min-height: 0;
   flex: 1 1 auto;
@@ -505,7 +491,7 @@ input[type='range'] {
 .map-filter-row {
   position: relative;
   z-index: 4;
-  margin: -60px 18px 0;
+  margin: 10px 18px 0;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -526,6 +512,7 @@ input[type='range'] {
   background: #1cff69;
 }
 
+.nearest-button,
 .chip {
   min-height: 42px;
   flex: 0 0 auto;
@@ -539,20 +526,124 @@ input[type='range'] {
   font-weight: 850;
 }
 
+.nearest-button {
+  border-color: rgba(13, 148, 85, 0.48);
+  color: #052e16;
+  background: #1cff69;
+}
+
 .chip.active {
   color: #09220f;
   background: #1cff69;
 }
 
-.station-carousel {
+.driver-fit-panel {
+  margin: 10px 18px 0;
+  padding: 12px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 12px 30px rgba(17, 32, 29, 0.1);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.driver-fit-panel label {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.driver-fit-panel span,
+.driver-fit-panel strong {
+  display: block;
+}
+
+.driver-fit-panel span {
+  color: #60736e;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.driver-fit-panel strong {
+  color: #15201f;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.driver-fit-panel input,
+.driver-fit-panel select {
+  min-width: 0;
+  width: 100%;
+}
+
+.driver-fit-panel select {
+  height: 34px;
+  border: 1px solid rgba(13, 148, 85, 0.24);
+  border-radius: 11px;
+  color: #15201f;
+  background: #f7fbf8;
+  font-weight: 800;
+}
+
+.urgency-toggle {
+  grid-column: 1 / -1;
+  min-height: 40px;
+  padding: 4px;
+  border-radius: 14px;
+  background: #e8f2ec;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+.urgency-toggle button {
+  border: 0;
+  border-radius: 10px;
+  color: #53665f;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.urgency-toggle button.active {
+  color: #052e16;
+  background: #1cff69;
+}
+
+.station-carousel-shell {
   position: relative;
   z-index: 4;
   margin: 14px 0 0;
-  padding: 0 0 0 18px;
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) 36px;
+  gap: 8px;
+  align-items: center;
+}
+
+.station-carousel {
+  min-width: 0;
+  padding: 0;
   display: flex;
   gap: 12px;
   overflow-x: auto;
+  overscroll-behavior-inline: contain;
   scroll-snap-type: x mandatory;
+  scroll-padding-inline: 0;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+}
+
+.carousel-control {
+  width: 36px;
+  height: 52px;
+  border: 0;
+  border-radius: 14px;
+  color: #052e16;
+  background: #1cff69;
+  font-size: 18px;
+  font-weight: 950;
 }
 
 .station-card {
@@ -784,10 +875,6 @@ input[type='range'] {
   color: #14201c;
 }
 
-.light-theme .phone-frame::before {
-  background: #e9efe9;
-}
-
 .light-theme .home-page,
 .light-theme .empty-page {
   background: #f4f8f2;
@@ -913,6 +1000,38 @@ input[type='range'] {
   background: #1cff69;
 }
 
+.dark-theme .driver-fit-panel {
+  background: rgba(23, 27, 25, 0.94);
+  box-shadow: none;
+}
+
+.dark-theme .driver-fit-panel span {
+  color: #9fb0a7;
+}
+
+.dark-theme .driver-fit-panel strong,
+.dark-theme .driver-fit-panel select {
+  color: #f4fff7;
+}
+
+.dark-theme .driver-fit-panel select,
+.dark-theme .urgency-toggle {
+  background: #202622;
+}
+
+.dark-theme .driver-fit-panel select {
+  border-color: rgba(36, 255, 112, 0.18);
+}
+
+.dark-theme .urgency-toggle button {
+  color: #aab7af;
+}
+
+.dark-theme .nearest-button {
+  color: #09220f;
+  background: #1cff69;
+}
+
 .dark-theme .station-card,
 .dark-theme .map-detail-sheet {
   border-color: rgba(255, 255, 255, 0.08);
@@ -962,9 +1081,6 @@ input[type='range'] {
     box-shadow: none;
   }
 
-  .phone-frame::before {
-    top: 0;
-  }
 }
 
 @media (max-width: 360px) {

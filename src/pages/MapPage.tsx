@@ -4,6 +4,8 @@ import StationMap from '../components/StationMap'
 import { StationCard } from '../components/StationCard'
 import { statusCopy, type ScoredStation } from '../data/stations'
 
+type VehicleModel = 'BYD Atto 3' | 'Tesla Model 3' | 'Hyundai Kona EV' | 'Nissan Leaf'
+
 type MapPageProps = {
   stations: ScoredStation[]
   selectedStation: ScoredStation
@@ -16,12 +18,12 @@ type MapPageProps = {
   onTargetChargeChange: (value: number) => void
   onToggleTheme: () => void
   onUrgencyChange: (value: 'hurry' | 'flexible') => void
-  onVehicleModelChange: (value: never) => void
+  onVehicleModelChange: (value: VehicleModel) => void
   targetCharge: number
   theme: 'dark' | 'light'
   urgency: 'hurry' | 'flexible'
-  vehicleModel: string
-  vehicleModels: string[]
+  vehicleModel: VehicleModel
+  vehicleModels: VehicleModel[]
 }
 
 export function MapPage({
@@ -130,7 +132,7 @@ export function MapPage({
         <label>
           <span>Vehicle</span>
           <select
-            onChange={(event) => onVehicleModelChange(event.target.value as never)}
+            onChange={(event) => onVehicleModelChange(event.target.value as VehicleModel)}
             value={vehicleModel}
           >
             {vehicleModels.map((model) => (
