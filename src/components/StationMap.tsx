@@ -1,8 +1,8 @@
 import 'mapbox-gl/dist/mapbox-gl.css'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
-import Map, { Layer, Marker, Popup, Source } from 'react-map-gl'
+import Map, { Layer, Marker, Popup, Source, type MapRef } from 'react-map-gl'
 
 type GridStatus = 'ONLINE' | 'DEGRADED' | 'OFFLINE' | 'UNKNOWN'
 
@@ -20,6 +20,9 @@ type Station = {
   chargersAvailable: number
   chargersTotal: number
   chargeSpeedKw: number
+  activeSessions?: number
+  queueCount?: number
+  connectorTypes?: string[]
 }
 
 type StationUpdate = Partial<Station> & {
@@ -29,6 +32,10 @@ type StationUpdate = Partial<Station> & {
 type StationMapProps = {
   stations: Station[]
   onStationSelect?: (station: Station) => void
+  routeRequest?: {
+    requestId: number
+    stationId: string
+  } | null
 }
 
 type RouteFeature = {
@@ -89,6 +96,13 @@ const routeLayer = {
     'line-width': 5,
   },
 } as const
+
+const cameraPadding = {
+  bottom: 86,
+  left: 54,
+  right: 54,
+  top: 86,
+}
 
 function getRuntimeEnv() {
   return import.meta.env as RuntimeEnv
@@ -177,7 +191,18 @@ function distanceBetweenKm(from: { latitude: number; longitude: number }, to: St
   return earthRadiusKm * 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine))
 }
 
-function StationMap({ onStationSelect, stations }: StationMapProps) {
+function getCoordinateBounds(coordinates: [number, number][]) {
+  const lngValues = coordinates.map(([longitude]) => longitude)
+  const latValues = coordinates.map(([, latitude]) => latitude)
+
+  return [
+    [Math.min(...lngValues), Math.min(...latValues)],
+    [Math.max(...lngValues), Math.max(...latValues)],
+  ] as [[number, number], [number, number]]
+}
+
+function StationMap({ onStationSelect, routeRequest, stations }: StationMapProps) {
+  const mapRef = useRef<MapRef | null>(null)
   const [stationData, setStationData] = useState<Station[]>(stations)
   const [selectedStationId, setSelectedStationId] = useState<string | null>(null)
   const [routeStationId, setRouteStationId] = useState<string | null>(null)
@@ -191,6 +216,29 @@ function StationMap({ onStationSelect, stations }: StationMapProps) {
   const routeStation = stationData.find((station) => station.stationId === routeStationId)
   const routeDistanceKm = routeFeature?.properties.distanceKm ?? (routeStation ? distanceBetweenKm(driverLocation, routeStation) : 0)
   const routeEtaMin = routeFeature?.properties.durationMin ?? Math.max(3, Math.round((routeDistanceKm / 28) * 60))
+
+  const fitMapToCoordinates = useCallback((coordinates: [number, number][]) => {
+    if (!mapRef.current || coordinates.length === 0) {
+      return
+    }
+
+    if (coordinates.length === 1) {
+      mapRef.current.flyTo({
+        center: coordinates[0],
+        duration: 650,
+        essential: true,
+        zoom: 14,
+      })
+      return
+    }
+
+    mapRef.current.fitBounds(getCoordinateBounds(coordinates), {
+      duration: 700,
+      essential: true,
+      maxZoom: 15,
+      padding: cameraPadding,
+    })
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -239,10 +287,15 @@ function StationMap({ onStationSelect, stations }: StationMapProps) {
     onStationSelect?.(station)
   }
 
-  const startInAppRoute = async (station: Station) => {
+  const startInAppRoute = useCallback(async (station: Station) => {
     setRouteStationId(station.stationId)
+    setSelectedStationId(station.stationId)
     setRouteFeature(null)
     setRouteStatus('loading')
+    fitMapToCoordinates([
+      [driverLocation.longitude, driverLocation.latitude],
+      [station.lng, station.lat],
+    ])
 
     if (!mapboxToken) {
       setRouteStatus('error')
@@ -278,11 +331,28 @@ function StationMap({ onStationSelect, stations }: StationMapProps) {
         },
         geometry: route.geometry,
       })
+      fitMapToCoordinates(route.geometry.coordinates)
       setRouteStatus('ready')
     } catch {
       setRouteStatus('error')
     }
-  }
+  }, [fitMapToCoordinates, mapboxToken])
+
+  useEffect(() => {
+    if (!routeRequest) {
+      return
+    }
+
+    const station = stationData.find((currentStation) => currentStation.stationId === routeRequest.stationId)
+
+    if (!station) {
+      return
+    }
+
+    queueMicrotask(() => {
+      void startInAppRoute(station)
+    })
+  }, [routeRequest, stationData, startInAppRoute])
 
   return (
     <div style={{ height: '100%', minHeight: 320, position: 'relative', width: '100%' }}>
@@ -308,6 +378,7 @@ function StationMap({ onStationSelect, stations }: StationMapProps) {
         initialViewState={defaultViewState}
         mapboxAccessToken={mapboxToken}
         mapStyle="mapbox://styles/mapbox/dark-v11"
+        ref={mapRef}
         style={{ height: '100%', width: '100%' }}
       >
         {routeFeature && (
@@ -439,10 +510,18 @@ function StationMap({ onStationSelect, stations }: StationMapProps) {
                   <dd style={{ margin: 0 }}>{selectedStation.estimatedWait} mins</dd>
                 </div>
                 <div>
+                  <dt style={{ color: '#94a3b8', fontSize: 11 }}>Queue</dt>
+                  <dd style={{ margin: 0 }}>{selectedStation.queueCount ?? 0} drivers</dd>
+                </div>
+                <div>
                   <dt style={{ color: '#94a3b8', fontSize: 11 }}>Chargers</dt>
                   <dd style={{ margin: 0 }}>
                     {selectedStation.chargersAvailable} / {selectedStation.chargersTotal}
                   </dd>
+                </div>
+                <div>
+                  <dt style={{ color: '#94a3b8', fontSize: 11 }}>Sessions</dt>
+                  <dd style={{ margin: 0 }}>{selectedStation.activeSessions ?? 0} active</dd>
                 </div>
                 <div>
                   <dt style={{ color: '#94a3b8', fontSize: 11 }}>Speed</dt>
@@ -453,6 +532,12 @@ function StationMap({ onStationSelect, stations }: StationMapProps) {
                   <dd style={{ margin: 0 }}>{formatRelativeTime(selectedStation.lastUpdated)}</dd>
                 </div>
               </dl>
+
+              {selectedStation.connectorTypes && selectedStation.connectorTypes.length > 0 && (
+                <div style={{ color: '#c7d2fe', fontSize: 12, margin: '-4px 0 12px' }}>
+                  {selectedStation.connectorTypes.join(' / ')}
+                </div>
+              )}
 
               <div style={{ display: 'grid', gap: 8, gridTemplateColumns: '1fr auto' }}>
                 <button
@@ -549,6 +634,10 @@ function StationMap({ onStationSelect, stations }: StationMapProps) {
 
 StationMap.propTypes = {
   onStationSelect: PropTypes.func,
+  routeRequest: PropTypes.shape({
+    requestId: PropTypes.number.isRequired,
+    stationId: PropTypes.string.isRequired,
+  }),
   stations: PropTypes.array.isRequired,
 }
 

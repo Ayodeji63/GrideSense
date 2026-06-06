@@ -15,27 +15,35 @@ import type { ScoredStation } from '../data/stations'
 type HomePageProps = {
   battery: number
   rangeKm: number
-  efficiency: number
   bestStation: ScoredStation
   activeAlerts: number
   onBatteryChange: (value: number) => void
-  onEfficiencyChange: (value: number) => void
+  onTargetChargeChange: (value: number) => void
   onOpenMap: () => void
   onToggleTheme: () => void
+  targetCharge: number
   theme: 'dark' | 'light'
+  vehicleBatteryKwh: number
+  vehicleConnectors: string[]
+  vehicleMaxKw: number
+  vehicleModel: string
 }
 
 export function HomePage({
   activeAlerts,
   battery,
   bestStation,
-  efficiency,
   onBatteryChange,
-  onEfficiencyChange,
+  onTargetChargeChange,
   onOpenMap,
   onToggleTheme,
   rangeKm,
+  targetCharge,
   theme,
+  vehicleBatteryKwh,
+  vehicleConnectors,
+  vehicleMaxKw,
+  vehicleModel,
 }: HomePageProps) {
   return (
     <div className="page home-page">
@@ -128,10 +136,14 @@ export function HomePage({
 
       <DriverControls
         battery={battery}
-        efficiency={efficiency}
         onBatteryChange={onBatteryChange}
-        onEfficiencyChange={onEfficiencyChange}
+        onTargetChargeChange={onTargetChargeChange}
         rangeKm={rangeKm}
+        targetCharge={targetCharge}
+        vehicleBatteryKwh={vehicleBatteryKwh}
+        vehicleConnectors={vehicleConnectors}
+        vehicleMaxKw={vehicleMaxKw}
+        vehicleModel={vehicleModel}
       />
 
       <button className="home-map-preview" onClick={onOpenMap} type="button">

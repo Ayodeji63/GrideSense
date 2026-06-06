@@ -1,51 +1,32 @@
-import { useMemo, useRef } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { BiCurrentLocation, BiMoon, BiSearch, BiSun } from 'react-icons/bi'
 import StationMap from '../components/StationMap'
 import { StationCard } from '../components/StationCard'
 import { statusCopy, type ScoredStation } from '../data/stations'
 
-type VehicleModel = 'BYD Atto 3' | 'Tesla Model 3' | 'Hyundai Kona EV' | 'Nissan Leaf'
-
 type MapPageProps = {
   stations: ScoredStation[]
   selectedStation: ScoredStation
   selectedId: string
-  battery: number
   fastOnly: boolean
-  onBatteryChange: (value: number) => void
   onFastOnlyChange: () => void
   onSelectStation: (stationId: string) => void
-  onTargetChargeChange: (value: number) => void
   onToggleTheme: () => void
-  onUrgencyChange: (value: 'hurry' | 'flexible') => void
-  onVehicleModelChange: (value: VehicleModel) => void
-  targetCharge: number
   theme: 'dark' | 'light'
-  urgency: 'hurry' | 'flexible'
-  vehicleModel: VehicleModel
-  vehicleModels: VehicleModel[]
 }
 
 export function MapPage({
-  battery,
   fastOnly,
-  onBatteryChange,
   onFastOnlyChange,
   onSelectStation,
-  onTargetChargeChange,
   onToggleTheme,
-  onUrgencyChange,
-  onVehicleModelChange,
   selectedId,
   selectedStation,
   stations,
-  targetCharge,
   theme,
-  urgency,
-  vehicleModel,
-  vehicleModels,
 }: MapPageProps) {
   const carouselRef = useRef<HTMLElement>(null)
+  const [routeRequest, setRouteRequest] = useState<{ requestId: number; stationId: string } | null>(null)
   const mapStations = useMemo(() => {
     return stations.map((station) => ({
       address: station.area,
@@ -55,23 +36,51 @@ export function MapPage({
       estimatedWait: station.waitMin,
       frequency: station.frequency,
       gridStatus: station.status,
-      lastUpdated: '2026-06-06T09:14:32Z',
+      lastUpdated: station.lastUpdated,
       lat: station.position[0],
       lng: station.position[1],
       name: station.name,
       stationId: station.id,
       voltage: station.voltage,
+      activeSessions: station.activeSessions,
+      queueCount: station.queueCount,
+      connectorTypes: station.connectors,
     }))
   }, [stations])
-  const nearestStation = stations[0]
-  const topStations = stations.slice(0, 3)
+  const nearestStation = useMemo(() => {
+    return [...stations]
+      .filter((station) => station.status !== 'OFFLINE' && station.status !== 'UNKNOWN')
+      .sort((firstStation, secondStation) => {
+        const distanceDelta = firstStation.distanceKm - secondStation.distanceKm
 
-  const scrollStations = (direction: 'back' | 'forward') => {
-    carouselRef.current?.scrollBy({
-      behavior: 'smooth',
-      left: direction === 'forward' ? 252 : -252,
-    })
-  }
+        if (Math.abs(distanceDelta) > 0.2) {
+          return distanceDelta
+        }
+
+        const waitDelta = firstStation.waitMin - secondStation.waitMin
+
+        if (waitDelta !== 0) {
+          return waitDelta
+        }
+
+        const availabilityDelta = secondStation.available - firstStation.available
+
+        if (availabilityDelta !== 0) {
+          return availabilityDelta
+        }
+
+        return secondStation.score - firstStation.score
+      })[0]
+  }, [stations])
+  const topStations = useMemo(() => {
+    const rankedTop = stations.slice(0, 3)
+
+    if (!nearestStation || rankedTop.some((station) => station.id === nearestStation.id)) {
+      return rankedTop
+    }
+
+    return [nearestStation, ...rankedTop.slice(0, 2)]
+  }, [nearestStation, stations])
 
   const selectNearestSuitable = () => {
     if (!nearestStation) {
@@ -79,6 +88,7 @@ export function MapPage({
     }
 
     onSelectStation(nearestStation.id)
+    setRouteRequest({ requestId: Date.now(), stationId: nearestStation.id })
     carouselRef.current?.scrollTo({ behavior: 'smooth', left: 0 })
   }
 
@@ -102,62 +112,9 @@ export function MapPage({
       <section className="dark-map real-map" aria-label="Live charging station map">
         <StationMap
           onStationSelect={(station) => onSelectStation(station.stationId)}
+          routeRequest={routeRequest}
           stations={mapStations}
         />
-      </section>
-
-      <section className="driver-fit-panel" aria-label="Driver charging inputs">
-        <label>
-          <span>Battery</span>
-          <strong>{battery}%</strong>
-          <input
-            max="100"
-            min="5"
-            onChange={(event) => onBatteryChange(Number(event.target.value))}
-            type="range"
-            value={battery}
-          />
-        </label>
-        <label>
-          <span>Target</span>
-          <strong>{targetCharge}%</strong>
-          <input
-            max="100"
-            min={battery}
-            onChange={(event) => onTargetChargeChange(Number(event.target.value))}
-            type="range"
-            value={targetCharge}
-          />
-        </label>
-        <label>
-          <span>Vehicle</span>
-          <select
-            onChange={(event) => onVehicleModelChange(event.target.value as VehicleModel)}
-            value={vehicleModel}
-          >
-            {vehicleModels.map((model) => (
-              <option key={model} value={model}>
-                {model}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div className="urgency-toggle">
-          <button
-            className={urgency === 'hurry' ? 'active' : ''}
-            onClick={() => onUrgencyChange('hurry')}
-            type="button"
-          >
-            In a hurry
-          </button>
-          <button
-            className={urgency === 'flexible' ? 'active' : ''}
-            onClick={() => onUrgencyChange('flexible')}
-            type="button"
-          >
-            Flexible
-          </button>
-        </div>
       </section>
 
       <div className="map-filter-row">
@@ -184,9 +141,6 @@ export function MapPage({
       </div>
 
       <div className="station-carousel-shell">
-        <button className="carousel-control" onClick={() => scrollStations('back')} type="button" aria-label="Previous station">
-          &lt;
-        </button>
         <section className="station-carousel" aria-label="Top 3 suitable charging stations" ref={carouselRef}>
           {topStations.map((station) => (
             <StationCard
@@ -197,9 +151,6 @@ export function MapPage({
             />
           ))}
         </section>
-        <button className="carousel-control" onClick={() => scrollStations('forward')} type="button" aria-label="Next station">
-          &gt;
-        </button>
       </div>
 
       <section className="map-detail-sheet" aria-live="polite">
@@ -215,6 +166,7 @@ export function MapPage({
         <p>
           Triangulated from Lagos driver point · {selectedStation.distanceKm} km away ·{' '}
           {statusCopy[selectedStation.status]} · {selectedStation.available}/{selectedStation.total} plugs
+          {selectedStation.queueCount > 0 ? ` · ${selectedStation.queueCount} queued` : ''}
         </p>
       </section>
     </div>

@@ -35,8 +35,9 @@ export function StationCard({ active = false, onSelect, station }: StationCardPr
         <strong>{station.name}</strong>
         <small>{station.area}</small>
         <div className="station-tags" aria-label="Station tags">
-          <em>{station.available}/{station.total} plugs</em>
-          <em>{station.speedKw >= 90 ? 'DC fast' : 'Standard'}</em>
+          <em>{station.available}/{station.total} plugs idle</em>
+          <em>{station.queueCount} queued</em>
+          <em>{station.connectors.join(' / ')}</em>
         </div>
         <span>
           <BiTimeFive aria-hidden="true" />
